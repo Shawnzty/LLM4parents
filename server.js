@@ -12,12 +12,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  // If using a proxy or alternative endpoint (useful for China access)
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-});
+// Lazy initialization of OpenAI client (to avoid crash if API key not set at startup)
+let openai = null;
+
+function getOpenAIClient() {
+  if (!openai && process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    });
+  }
+  return openai;
+}
 
 // Available models configuration
 const AVAILABLE_MODELS = [
@@ -42,7 +48,8 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const client = getOpenAIClient();
+    if (!client) {
       return res.status(500).json({ error: 'API密钥未配置 / API key not configured' });
     }
 
@@ -52,7 +59,7 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: '无效的模型 / Invalid model' });
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: model,
       messages: messages,
       max_tokens: 4096,
@@ -92,7 +99,8 @@ app.post('/api/chat/stream', async (req, res) => {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const client = getOpenAIClient();
+    if (!client) {
       return res.status(500).json({ error: 'API密钥未配置 / API key not configured' });
     }
 
@@ -107,7 +115,7 @@ app.post('/api/chat/stream', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = await openai.chat.completions.create({
+    const stream = await client.chat.completions.create({
       model: model,
       messages: messages,
       max_tokens: 4096,
