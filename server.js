@@ -58,12 +58,19 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: '无效的模型 / Invalid model' });
     }
 
-    const completion = await client.chat.completions.create({
+    // Build request options - some models don't support temperature
+    const requestOptions = {
       model: model,
       messages: messages,
       max_tokens: 4096,
-      temperature: 0.7,
-    });
+    };
+
+    // Only add temperature for models that support it (not reasoning models)
+    if (!model.startsWith('gpt-5')) {
+      requestOptions.temperature = 0.7;
+    }
+
+    const completion = await client.chat.completions.create(requestOptions);
 
     res.json({
       message: completion.choices[0].message,
@@ -109,18 +116,25 @@ app.post('/api/chat/stream', async (req, res) => {
       return res.status(400).json({ error: '无效的模型 / Invalid model' });
     }
 
+    // Build request options - some models don't support temperature
+    const requestOptions = {
+      model: model,
+      messages: messages,
+      max_tokens: 4096,
+      stream: true,
+    };
+
+    // Only add temperature for models that support it (not reasoning models)
+    if (!model.startsWith('gpt-5')) {
+      requestOptions.temperature = 0.7;
+    }
+
     // Set headers for SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = await client.chat.completions.create({
-      model: model,
-      messages: messages,
-      max_tokens: 4096,
-      temperature: 0.7,
-      stream: true,
-    });
+    const stream = await client.chat.completions.create(requestOptions);
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
@@ -133,9 +147,20 @@ app.post('/api/chat/stream', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('OpenAI API Stream Error:', error);
-    res.status(500).json({
-      error: '发生错误，请稍后再试 / An error occurred, please try again later'
-    });
+
+    // Extract meaningful error message
+    const errorMessage = error.message || '未知错误';
+    const statusCode = error.status || 500;
+
+    // Check if headers already sent
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+      res.end();
+    } else {
+      res.status(statusCode).json({
+        error: `API错误: ${errorMessage}`,
+      });
+    }
   }
 });
 
