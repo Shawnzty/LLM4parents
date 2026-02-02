@@ -6,6 +6,8 @@
   let conversationHistory = [];
   let isLoading = false;
   let currentModel = 'gpt-4o';
+  let pendingImages = []; // Array of {file, dataUrl}
+  let modelsData = []; // Store models info including vision support
 
   // DOM Elements
   const chatContainer = document.getElementById('chat-container');
@@ -17,6 +19,11 @@
   const modelSelect = document.getElementById('model-select');
   const loadingOverlay = document.getElementById('loading-overlay');
   const errorToast = document.getElementById('error-toast');
+  const imageInput = document.getElementById('image-input');
+  const uploadBtn = document.getElementById('upload-btn');
+  const imagePreviewContainer = document.getElementById('image-preview-container');
+  const imagePreviews = document.getElementById('image-previews');
+  const clearImagesBtn = document.getElementById('clear-images-btn');
 
   // Initialize
   async function init() {
@@ -31,12 +38,13 @@
     try {
       const response = await fetch('/api/models');
       const data = await response.json();
+      modelsData = data.models;
 
       modelSelect.innerHTML = '';
       data.models.forEach(model => {
         const option = document.createElement('option');
         option.value = model.id;
-        option.textContent = model.name;
+        option.textContent = model.name + (model.supportsVision ? ' [支持图片]' : '');
         modelSelect.appendChild(option);
       });
 
@@ -49,6 +57,12 @@
     } catch (error) {
       console.error('Failed to load models:', error);
     }
+  }
+
+  // Check if current model supports vision
+  function currentModelSupportsVision() {
+    const model = modelsData.find(m => m.id === currentModel);
+    return model ? model.supportsVision : false;
   }
 
   // Setup event listeners
@@ -74,6 +88,11 @@
     modelSelect.addEventListener('change', (e) => {
       currentModel = e.target.value;
       localStorage.setItem('selectedModel', currentModel);
+
+      // Warn if images are pending and model doesn't support vision
+      if (pendingImages.length > 0 && !currentModelSupportsVision()) {
+        showError('当前模型不支持图片，请选择支持图片的模型或清除图片');
+      }
     });
 
     // Quick prompts
@@ -84,6 +103,133 @@
         sendMessage();
       });
     });
+
+    // Image upload button
+    uploadBtn.addEventListener('click', () => {
+      imageInput.click();
+    });
+
+    // Image file selection
+    imageInput.addEventListener('change', handleImageSelection);
+
+    // Clear images button
+    clearImagesBtn.addEventListener('click', clearPendingImages);
+
+    // Handle paste events for images
+    document.addEventListener('paste', handlePaste);
+
+    // Handle drag and drop
+    const inputArea = document.querySelector('.input-area');
+    inputArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      inputArea.style.backgroundColor = 'var(--background-color)';
+    });
+    inputArea.addEventListener('dragleave', () => {
+      inputArea.style.backgroundColor = '';
+    });
+    inputArea.addEventListener('drop', handleDrop);
+  }
+
+  // Handle image selection
+  function handleImageSelection(e) {
+    const files = Array.from(e.target.files);
+    processImageFiles(files);
+    imageInput.value = ''; // Reset input
+  }
+
+  // Handle paste event
+  function handlePaste(e) {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      const files = imageItems.map(item => item.getAsFile()).filter(Boolean);
+      processImageFiles(files);
+    }
+  }
+
+  // Handle drag and drop
+  function handleDrop(e) {
+    e.preventDefault();
+    e.target.closest('.input-area').style.backgroundColor = '';
+
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+    processImageFiles(files);
+  }
+
+  // Process image files
+  function processImageFiles(files) {
+    if (files.length === 0) return;
+
+    // Check model support
+    if (!currentModelSupportsVision()) {
+      showError('当前模型不支持图片，请先选择支持图片的模型（如GPT-4o、o1等）');
+      return;
+    }
+
+    // Limit to 10 images
+    const remainingSlots = 10 - pendingImages.length;
+    if (remainingSlots <= 0) {
+      showError('最多只能上传10张图片');
+      return;
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    filesToProcess.forEach(file => {
+      // Check file size (max 20MB per image)
+      if (file.size > 20 * 1024 * 1024) {
+        showError(`图片 ${file.name} 太大，最大支持20MB`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        pendingImages.push({ file, dataUrl });
+        updateImagePreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Update image previews
+  function updateImagePreviews() {
+    if (pendingImages.length === 0) {
+      imagePreviewContainer.style.display = 'none';
+      uploadBtn.classList.remove('has-images');
+      return;
+    }
+
+    imagePreviewContainer.style.display = 'block';
+    uploadBtn.classList.add('has-images');
+
+    imagePreviews.innerHTML = '';
+    pendingImages.forEach((img, index) => {
+      const div = document.createElement('div');
+      div.className = 'image-preview-item';
+      div.innerHTML = `
+        <img src="${img.dataUrl}" alt="Preview ${index + 1}">
+        <button class="remove-image" data-index="${index}" title="删除">×</button>
+      `;
+      imagePreviews.appendChild(div);
+    });
+
+    // Add click handlers for remove buttons
+    imagePreviews.querySelectorAll('.remove-image').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.target.dataset.index);
+        pendingImages.splice(index, 1);
+        updateImagePreviews();
+      });
+    });
+  }
+
+  // Clear pending images
+  function clearPendingImages() {
+    pendingImages = [];
+    updateImagePreviews();
   }
 
   // Auto-resize textarea
@@ -95,25 +241,62 @@
   // Send message
   async function sendMessage() {
     const message = userInput.value.trim();
-    if (!message || isLoading) return;
+    if ((!message && pendingImages.length === 0) || isLoading) return;
+
+    // Check if trying to send images with non-vision model
+    if (pendingImages.length > 0 && !currentModelSupportsVision()) {
+      showError('当前模型不支持图片，请选择支持图片的模型');
+      return;
+    }
 
     // Hide welcome message
     if (welcomeMessage) {
       welcomeMessage.style.display = 'none';
     }
 
-    // Add user message to UI
-    addMessageToUI('user', message);
+    // Build message content
+    let messageContent;
+    const currentImages = [...pendingImages]; // Copy for display
+
+    if (pendingImages.length > 0) {
+      // Multi-modal message with images
+      messageContent = [];
+
+      // Add images first
+      pendingImages.forEach(img => {
+        messageContent.push({
+          type: 'image_url',
+          image_url: {
+            url: img.dataUrl,
+            detail: 'auto'
+          }
+        });
+      });
+
+      // Add text if present
+      if (message) {
+        messageContent.push({
+          type: 'text',
+          text: message
+        });
+      }
+    } else {
+      messageContent = message;
+    }
+
+    // Add user message to UI (with images)
+    addMessageToUI('user', message, currentImages);
 
     // Add to conversation history
     conversationHistory.push({
       role: 'user',
-      content: message
+      content: messageContent
     });
 
-    // Clear input
+    // Clear input and images
     userInput.value = '';
     autoResizeTextarea();
+    clearPendingImages();
 
     // Save to storage
     saveConversationToStorage();
@@ -151,7 +334,7 @@
       typingElement.remove();
 
       // Create message element for streaming
-      const messageElement = createMessageElement('assistant', '');
+      const messageElement = createMessageElement('assistant', '', []);
       messagesContainer.appendChild(messageElement);
       const contentElement = messageElement.querySelector('.message-content');
 
@@ -211,26 +394,42 @@
   }
 
   // Add message to UI
-  function addMessageToUI(role, content) {
-    const messageElement = createMessageElement(role, content);
+  function addMessageToUI(role, content, images = []) {
+    const messageElement = createMessageElement(role, content, images);
     messagesContainer.appendChild(messageElement);
     scrollToBottom();
   }
 
   // Create message element
-  function createMessageElement(role, content) {
+  function createMessageElement(role, content, images = []) {
     const div = document.createElement('div');
     div.className = `message ${role}`;
 
     const avatar = role === 'user' ? '👤' : '🤖';
 
+    let imagesHtml = '';
+    if (images && images.length > 0) {
+      imagesHtml = '<div class="message-images">' +
+        images.map(img => `<img src="${img.dataUrl}" alt="Uploaded image" onclick="window.showImageModal(this.src)">`).join('') +
+        '</div>';
+    }
+
     div.innerHTML = `
       <div class="message-avatar">${avatar}</div>
-      <div class="message-content">${formatMessage(content)}</div>
+      <div class="message-content">${imagesHtml}${formatMessage(content)}</div>
     `;
 
     return div;
   }
+
+  // Show image modal (exposed globally)
+  window.showImageModal = function(src) {
+    const modal = document.createElement('div');
+    modal.className = 'image-modal';
+    modal.innerHTML = `<img src="${src}" alt="Full size image">`;
+    modal.addEventListener('click', () => modal.remove());
+    document.body.appendChild(modal);
+  };
 
   // Format message content (basic markdown support)
   function formatMessage(content) {
@@ -290,11 +489,12 @@
 
   // Clear conversation
   function clearConversation() {
-    if (conversationHistory.length === 0) return;
+    if (conversationHistory.length === 0 && pendingImages.length === 0) return;
 
     if (confirm('确定要清空所有对话吗？/ Clear all messages?')) {
       conversationHistory = [];
       messagesContainer.innerHTML = '';
+      clearPendingImages();
       if (welcomeMessage) {
         welcomeMessage.style.display = 'block';
       }
@@ -305,8 +505,20 @@
   // Save conversation to localStorage
   function saveConversationToStorage() {
     try {
-      // Only keep last 50 messages to avoid storage issues
-      const toSave = conversationHistory.slice(-50);
+      // Only keep last 20 messages to avoid storage issues (images are large)
+      // Also strip image data from storage to save space
+      const toSave = conversationHistory.slice(-20).map(msg => {
+        if (Array.isArray(msg.content)) {
+          // Strip image data, keep only text
+          const textContent = msg.content.find(c => c.type === 'text');
+          return {
+            ...msg,
+            content: textContent ? textContent.text : '[图片消息]',
+            hadImages: true
+          };
+        }
+        return msg;
+      });
       localStorage.setItem('conversationHistory', JSON.stringify(toSave));
     } catch (e) {
       console.warn('Failed to save conversation:', e);
@@ -318,12 +530,19 @@
     try {
       const saved = localStorage.getItem('conversationHistory');
       if (saved) {
-        conversationHistory = JSON.parse(saved);
-        if (conversationHistory.length > 0) {
+        const loadedHistory = JSON.parse(saved);
+        if (loadedHistory.length > 0) {
           welcomeMessage.style.display = 'none';
-          conversationHistory.forEach(msg => {
-            addMessageToUI(msg.role, msg.content);
+          loadedHistory.forEach(msg => {
+            // Display with note about images
+            let displayContent = msg.content;
+            if (msg.hadImages) {
+              displayContent = '[包含图片] ' + displayContent;
+            }
+            addMessageToUI(msg.role, displayContent);
           });
+          // Restore history for API (without image data)
+          conversationHistory = loadedHistory;
         }
       }
     } catch (e) {

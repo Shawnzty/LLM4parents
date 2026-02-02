@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Lazy initialization of OpenAI client (to avoid crash if API key not set at startup)
@@ -26,12 +26,22 @@ function getOpenAIClient() {
 }
 
 // Available models configuration
+// Models marked with supportsVision: true can process images
 const AVAILABLE_MODELS = [
-  { id: 'gpt-4o', name: 'GPT-4o (推荐/Recommended)' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (快速/Fast)' },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-  { id: 'gpt-4', name: 'GPT-4' },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo (经济/Economic)' },
+  // Latest reasoning models
+  { id: 'o1', name: 'o1 (最强推理/Best Reasoning)', supportsVision: true },
+  { id: 'o1-mini', name: 'o1-mini (快速推理/Fast Reasoning)', supportsVision: true },
+  { id: 'o1-pro', name: 'o1-pro (专业推理/Pro Reasoning)', supportsVision: true },
+  // GPT-4.5 series
+  { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview (最新/Latest)', supportsVision: true },
+  // GPT-4o series
+  { id: 'gpt-4o', name: 'GPT-4o (推荐/Recommended)', supportsVision: true },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (快速/Fast)', supportsVision: true },
+  // GPT-4 series
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', supportsVision: true },
+  { id: 'gpt-4', name: 'GPT-4', supportsVision: false },
+  // Economic options
+  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo (经济/Economic)', supportsVision: false },
 ];
 
 // Get available models

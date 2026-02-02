@@ -48,7 +48,16 @@
 
     <!-- Input Area -->
     <footer class="input-area">
+      <!-- Image Preview Area -->
+      <div class="image-preview-container" id="image-preview-container" style="display: none;">
+        <div class="image-previews" id="image-previews"></div>
+        <button class="clear-images-btn" id="clear-images-btn" title="清除所有图片">清除图片</button>
+      </div>
       <div class="input-container">
+        <input type="file" id="image-input" accept="image/*" multiple style="display: none;">
+        <button id="upload-btn" class="btn btn-icon" title="上传图片 (支持多张)">
+          📷
+        </button>
         <textarea
           id="user-input"
           placeholder="请输入您的问题... (按 Enter 发送，Shift+Enter 换行)"
@@ -59,7 +68,7 @@
         </button>
       </div>
       <div class="input-hint">
-        提示：您可以问我任何问题，我会尽力帮助您！
+        提示：您可以上传图片让AI分析，或直接输入问题。选择支持图片的模型即可使用图片功能。
       </div>
     </footer>
   </div>
