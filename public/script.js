@@ -5,7 +5,7 @@
   // State
   let conversationHistory = [];
   let isLoading = false;
-  let currentModel = 'gpt-4o';
+  let currentModel = 'gpt-5.2';
   let pendingImages = []; // Array of {file, dataUrl}
   let modelsData = []; // Store models info including vision support
 

@@ -28,20 +28,9 @@ function getOpenAIClient() {
 // Available models configuration
 // Models marked with supportsVision: true can process images
 const AVAILABLE_MODELS = [
-  // Latest reasoning models
-  { id: 'o1', name: 'o1 (最强推理/Best Reasoning)', supportsVision: true },
-  { id: 'o1-mini', name: 'o1-mini (快速推理/Fast Reasoning)', supportsVision: true },
-  { id: 'o1-pro', name: 'o1-pro (专业推理/Pro Reasoning)', supportsVision: true },
-  // GPT-4.5 series
-  { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview (最新/Latest)', supportsVision: true },
-  // GPT-4o series
-  { id: 'gpt-4o', name: 'GPT-4o (推荐/Recommended)', supportsVision: true },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (快速/Fast)', supportsVision: true },
-  // GPT-4 series
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', supportsVision: true },
-  { id: 'gpt-4', name: 'GPT-4', supportsVision: false },
-  // Economic options
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo (经济/Economic)', supportsVision: false },
+  { id: 'gpt-5.2', name: 'GPT-5.2 (最强/Best)', supportsVision: true },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini (快速/Fast)', supportsVision: true },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (经济/Economic)', supportsVision: true },
 ];
 
 // Get available models
@@ -52,7 +41,7 @@ app.get('/api/models', (req, res) => {
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, model = 'gpt-4o' } = req.body;
+    const { messages, model = 'gpt-5.2' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
@@ -103,7 +92,7 @@ app.post('/api/chat', async (req, res) => {
 // Chat endpoint with streaming
 app.post('/api/chat/stream', async (req, res) => {
   try {
-    const { messages, model = 'gpt-4o' } = req.body;
+    const { messages, model = 'gpt-5.2' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
