@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 智能助手 - GPT Chat</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🤖 AI 智能助手</h1>
+      <div class="header-controls">
+        <select id="model-select" class="model-select">
+          <option value="gpt-4o">GPT-4o (推荐)</option>
+        </select>
+        <button id="clear-btn" class="btn btn-secondary" title="清空对话">
+          🗑️ 清空
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Container -->
+    <main class="chat-container" id="chat-container">
+      <div class="welcome-message" id="welcome-message">
+        <div class="welcome-icon">👋</div>
+        <h2>欢迎使用 AI 智能助手！</h2>
+        <p>我可以帮助您回答问题、写作、翻译、编程等各种任务。</p>
+        <div class="quick-prompts">
+          <button class="quick-prompt" data-prompt="请用简单的语言解释什么是人工智能？">
+            💡 解释人工智能
+          </button>
+          <button class="quick-prompt" data-prompt="请帮我写一封感谢朋友帮忙的短信">
+            ✉️ 写感谢短信
+          </button>
+          <button class="quick-prompt" data-prompt="请把这段话翻译成英文：今天天气真好，适合出去散步。">
+            🌐 翻译例句
+          </button>
+          <button class="quick-prompt" data-prompt="请给我推荐5道简单易做的家常菜">
+            🍳 推荐家常菜
+          </button>
+        </div>
+      </div>
+
+      <div class="messages" id="messages"></div>
+    </main>
+
+    <!-- Input Area -->
+    <footer class="input-area">
+      <div class="input-container">
+        <textarea
+          id="user-input"
+          placeholder="请输入您的问题... (按 Enter 发送，Shift+Enter 换行)"
+          rows="1"
+        ></textarea>
+        <button id="send-btn" class="btn btn-primary" title="发送消息">
+          发送 ➤
+        </button>
+      </div>
+      <div class="input-hint">
+        提示：您可以问我任何问题，我会尽力帮助您！
+      </div>
+    </footer>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <p>正在思考中...</p>
+  </div>
+
+  <!-- Error Toast -->
+  <div class="toast" id="error-toast" style="display: none;"></div>
+
+  <script src="/script.js"></script>
+</body>
+</html>
