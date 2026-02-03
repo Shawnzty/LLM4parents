@@ -5,7 +5,7 @@
   // State
   let conversationHistory = [];
   let isLoading = false;
-  let currentModel = 'gpt-5-mini';
+  let currentModel = 'gemini-3-flash';
   let pendingImages = []; // Array of {file, dataUrl}
   let modelsData = []; // Store models info including vision support
   let isRecording = false;
