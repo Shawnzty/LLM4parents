@@ -58,15 +58,18 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: '无效的模型 / Invalid model' });
     }
 
-    // Build request options - some models don't support temperature
+    // Build request options - GPT-5 models use different parameters
+    const isGPT5 = model.startsWith('gpt-5');
     const requestOptions = {
       model: model,
       messages: messages,
-      max_tokens: 4096,
     };
 
-    // Only add temperature for models that support it (not reasoning models)
-    if (!model.startsWith('gpt-5')) {
+    // GPT-5 models use max_completion_tokens, older models use max_tokens
+    if (isGPT5) {
+      requestOptions.max_completion_tokens = 4096;
+    } else {
+      requestOptions.max_tokens = 4096;
       requestOptions.temperature = 0.7;
     }
 
@@ -116,16 +119,19 @@ app.post('/api/chat/stream', async (req, res) => {
       return res.status(400).json({ error: '无效的模型 / Invalid model' });
     }
 
-    // Build request options - some models don't support temperature
+    // Build request options - GPT-5 models use different parameters
+    const isGPT5 = model.startsWith('gpt-5');
     const requestOptions = {
       model: model,
       messages: messages,
-      max_tokens: 4096,
       stream: true,
     };
 
-    // Only add temperature for models that support it (not reasoning models)
-    if (!model.startsWith('gpt-5')) {
+    // GPT-5 models use max_completion_tokens, older models use max_tokens
+    if (isGPT5) {
+      requestOptions.max_completion_tokens = 4096;
+    } else {
+      requestOptions.max_tokens = 4096;
       requestOptions.temperature = 0.7;
     }
 
