@@ -5,9 +5,11 @@
   // State
   let conversationHistory = [];
   let isLoading = false;
-  let currentModel = 'gpt-5.2';
+  let currentModel = 'gpt-5-mini';
   let pendingImages = []; // Array of {file, dataUrl}
   let modelsData = []; // Store models info including vision support
+  let isRecording = false;
+  let recognition = null;
 
   // DOM Elements
   const chatContainer = document.getElementById('chat-container');
@@ -21,6 +23,7 @@
   const errorToast = document.getElementById('error-toast');
   const imageInput = document.getElementById('image-input');
   const uploadBtn = document.getElementById('upload-btn');
+  const voiceBtn = document.getElementById('voice-btn');
   const imagePreviewContainer = document.getElementById('image-preview-container');
   const imagePreviews = document.getElementById('image-previews');
   const clearImagesBtn = document.getElementById('clear-images-btn');
@@ -29,6 +32,7 @@
   async function init() {
     await loadModels();
     setupEventListeners();
+    setupVoiceRecognition();
     loadConversationFromStorage();
     autoResizeTextarea();
   }
@@ -44,7 +48,7 @@
       data.models.forEach(model => {
         const option = document.createElement('option');
         option.value = model.id;
-        option.textContent = model.name + (model.supportsVision ? ' [支持图片]' : '');
+        option.textContent = model.name;
         modelSelect.appendChild(option);
       });
 
@@ -109,6 +113,9 @@
       imageInput.click();
     });
 
+    // Voice input button
+    voiceBtn.addEventListener('click', toggleVoiceRecording);
+
     // Image file selection
     imageInput.addEventListener('change', handleImageSelection);
 
@@ -156,6 +163,91 @@
 
     const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
     processImageFiles(files);
+  }
+
+  // Setup voice recognition
+  function setupVoiceRecognition() {
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.warn('Speech recognition not supported');
+      voiceBtn.style.display = 'none';
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'zh-CN'; // Chinese language
+
+    recognition.onstart = () => {
+      isRecording = true;
+      voiceBtn.classList.add('recording');
+      voiceBtn.innerHTML = '🔴';
+      voiceBtn.title = '正在录音... 点击停止';
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      voiceBtn.classList.remove('recording');
+      voiceBtn.innerHTML = '🎤';
+      voiceBtn.title = '语音输入 (点击开始)';
+    };
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Update input with transcription
+      if (finalTranscript) {
+        userInput.value += finalTranscript;
+        autoResizeTextarea();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      isRecording = false;
+      voiceBtn.classList.remove('recording');
+      voiceBtn.innerHTML = '🎤';
+
+      if (event.error === 'not-allowed') {
+        showError('请允许麦克风权限以使用语音输入');
+      } else if (event.error === 'no-speech') {
+        showError('未检测到语音，请再试一次');
+      } else {
+        showError('语音识别出错，请再试一次');
+      }
+    };
+  }
+
+  // Toggle voice recording
+  function toggleVoiceRecording() {
+    if (!recognition) {
+      showError('您的浏览器不支持语音输入，请使用Chrome或Edge浏览器');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+      } catch (e) {
+        // Already started, stop it
+        recognition.stop();
+      }
+    }
   }
 
   // Process image files

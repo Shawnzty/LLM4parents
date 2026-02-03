@@ -440,6 +440,17 @@ body {
   border-color: var(--success-color);
 }
 
+.btn-icon.recording {
+  background-color: var(--error-color);
+  border-color: var(--error-color);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
 #user-input {
   flex: 1;
   padding: 0.875rem 1rem;

@@ -41,7 +41,7 @@ app.get('/api/models', (req, res) => {
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, model = 'gpt-5.2' } = req.body;
+    const { messages, model = 'gpt-5-mini' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
@@ -102,7 +102,7 @@ app.post('/api/chat', async (req, res) => {
 // Chat endpoint with streaming
 app.post('/api/chat/stream', async (req, res) => {
   try {
-    const { messages, model = 'gpt-5.2' } = req.body;
+    const { messages, model = 'gpt-5-mini' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });

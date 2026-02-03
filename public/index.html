@@ -28,17 +28,17 @@
         <h2>欢迎使用 AI 智能助手！</h2>
         <p>我可以帮助您回答问题、写作、翻译、编程等各种任务。</p>
         <div class="quick-prompts">
-          <button class="quick-prompt" data-prompt="请用简单的语言解释什么是人工智能？">
-            💡 解释人工智能
+          <button class="quick-prompt" data-prompt="请帮我总结一下最近一周国内外发生的重要新闻事件">
+            📰 最近一周新闻
           </button>
-          <button class="quick-prompt" data-prompt="请帮我写一封感谢朋友帮忙的短信">
-            ✉️ 写感谢短信
+          <button class="quick-prompt" data-prompt="请你扮演一位经验丰富的医生，我会向你描述我的症状，请给我一些建议。注意：这只是参考建议，严重情况请去医院就诊。">
+            🩺 医生咨询
           </button>
-          <button class="quick-prompt" data-prompt="请把这段话翻译成英文：今天天气真好，适合出去散步。">
-            🌐 翻译例句
+          <button class="quick-prompt" data-prompt="请你扮演一位专业的营养师，根据我的情况为我制定健康的饮食建议和食谱。">
+            🥗 营养师咨询
           </button>
-          <button class="quick-prompt" data-prompt="请给我推荐5道简单易做的家常菜">
-            🍳 推荐家常菜
+          <button class="quick-prompt" data-prompt="请帮我写一封问候老朋友的信，表达对他们的思念和祝福。">
+            ✉️ 写问候信
           </button>
         </div>
       </div>
@@ -58,9 +58,12 @@
         <button id="upload-btn" class="btn btn-icon" title="上传图片 (支持多张)">
           📷
         </button>
+        <button id="voice-btn" class="btn btn-icon" title="语音输入 (按住说话)">
+          🎤
+        </button>
         <textarea
           id="user-input"
-          placeholder="请输入您的问题... (按 Enter 发送，Shift+Enter 换行)"
+          placeholder="请输入您的问题，或点击麦克风语音输入..."
           rows="1"
         ></textarea>
         <button id="send-btn" class="btn btn-primary" title="发送消息">
@@ -68,7 +71,7 @@
         </button>
       </div>
       <div class="input-hint">
-        提示：您可以上传图片让AI分析，或直接输入问题。选择支持图片的模型即可使用图片功能。
+        提示：点击 🎤 可以语音输入，点击 📷 可以上传图片让AI分析。
       </div>
     </footer>
   </div>
