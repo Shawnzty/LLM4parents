@@ -59,9 +59,9 @@ function getGeminiClient() {
 
 // Available models configuration (Gemini 3 Flash first as default)
 const AVAILABLE_MODELS = [
-  { id: 'gemini-3-flash', name: 'Gemini 3 Flash (免费/Free)', supportsVision: true, provider: 'gemini' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini (快速/Fast)', supportsVision: true, provider: 'openai' },
-  { id: 'gpt-5.2', name: 'GPT-5.2 (最强/Best)', supportsVision: true, provider: 'openai' },
+  { id: 'gemini-3-flash', name: '免费模型', supportsVision: true, provider: 'gemini' },
+  { id: 'gpt-5-mini', name: '快速模型', supportsVision: true, provider: 'openai' },
+  { id: 'gpt-5.2', name: '最强模型', supportsVision: true, provider: 'openai' },
 ];
 
 // Get available models
