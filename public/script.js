@@ -28,6 +28,10 @@
   const imagePreviewContainer = document.getElementById('image-preview-container');
   const imagePreviews = document.getElementById('image-previews');
   const clearImagesBtn = document.getElementById('clear-images-btn');
+  const historyBtn = document.getElementById('history-btn');
+  const historyPanel = document.getElementById('history-panel');
+  const historyContent = document.getElementById('history-content');
+  const closeHistoryBtn = document.getElementById('close-history-btn');
 
   // Generate UUID for device identification
   function generateUUID() {
@@ -156,6 +160,10 @@
       inputArea.style.backgroundColor = '';
     });
     inputArea.addEventListener('drop', handleDrop);
+
+    // History panel
+    historyBtn.addEventListener('click', showHistoryPanel);
+    closeHistoryBtn.addEventListener('click', hideHistoryPanel);
   }
 
   // Handle image selection
@@ -726,6 +734,80 @@
   // Show/hide loading overlay
   function showLoading(show) {
     loadingOverlay.style.display = show ? 'flex' : 'none';
+  }
+
+  // Show history panel
+  function showHistoryPanel() {
+    historyPanel.style.display = 'flex';
+    populateHistoryPanel();
+  }
+
+  // Hide history panel
+  function hideHistoryPanel() {
+    historyPanel.style.display = 'none';
+  }
+
+  // Populate history panel with current conversation
+  function populateHistoryPanel() {
+    if (conversationHistory.length === 0) {
+      historyContent.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+      return;
+    }
+
+    // Group messages into conversation pairs (user + assistant)
+    const conversations = [];
+    for (let i = 0; i < conversationHistory.length; i++) {
+      const msg = conversationHistory[i];
+      if (msg.role === 'user') {
+        const userContent = Array.isArray(msg.content)
+          ? (msg.content.find(c => c.type === 'text')?.text || '[图片消息]')
+          : msg.content;
+
+        let assistantContent = '';
+        if (i + 1 < conversationHistory.length && conversationHistory[i + 1].role === 'assistant') {
+          assistantContent = conversationHistory[i + 1].content;
+          i++; // Skip the assistant message in next iteration
+        }
+
+        conversations.push({
+          userMessage: userContent,
+          assistantMessage: assistantContent,
+          index: conversations.length
+        });
+      }
+    }
+
+    historyContent.innerHTML = conversations.map((conv, idx) => `
+      <div class="history-item" data-index="${idx}">
+        <div class="history-item-preview">
+          <strong>问:</strong> ${escapeHtml(conv.userMessage.substring(0, 50))}${conv.userMessage.length > 50 ? '...' : ''}
+        </div>
+        <div class="history-item-meta">
+          <span>对话 ${idx + 1}</span>
+          <span>${conv.assistantMessage ? '已回复' : '等待回复'}</span>
+        </div>
+      </div>
+    `).join('');
+
+    // Add click handlers to scroll to that message
+    historyContent.querySelectorAll('.history-item').forEach(item => {
+      item.addEventListener('click', () => {
+        hideHistoryPanel();
+        // Scroll to the corresponding message in the chat
+        const messages = messagesContainer.querySelectorAll('.message');
+        const targetIndex = parseInt(item.dataset.index) * 2; // Each conversation has 2 messages
+        if (messages[targetIndex]) {
+          messages[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+  }
+
+  // Helper to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   // Initialize when DOM is ready
