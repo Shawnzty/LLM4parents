@@ -10,6 +10,7 @@
   let modelsData = []; // Store models info including vision support
   let isRecording = false;
   let recognition = null;
+  let deviceId = null; // Unique device identifier
 
   // DOM Elements
   const chatContainer = document.getElementById('chat-container');
@@ -28,12 +29,32 @@
   const imagePreviews = document.getElementById('image-previews');
   const clearImagesBtn = document.getElementById('clear-images-btn');
 
+  // Generate UUID for device identification
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  // Get or create device ID
+  function getDeviceId() {
+    let id = localStorage.getItem('deviceId');
+    if (!id) {
+      id = generateUUID();
+      localStorage.setItem('deviceId', id);
+    }
+    return id;
+  }
+
   // Initialize
   async function init() {
+    deviceId = getDeviceId();
     await loadModels();
     setupEventListeners();
     setupVoiceRecognition();
-    loadConversationFromStorage();
+    await loadConversationFromServer();
     autoResizeTextarea();
   }
 
@@ -580,7 +601,7 @@
   }
 
   // Clear conversation
-  function clearConversation() {
+  async function clearConversation() {
     if (conversationHistory.length === 0 && pendingImages.length === 0) return;
 
     if (confirm('确定要清空所有对话吗？/ Clear all messages?')) {
@@ -591,15 +612,26 @@
         welcomeMessage.style.display = 'block';
       }
       localStorage.removeItem('conversationHistory');
+
+      // Also clear from server
+      try {
+        await fetch('/api/history/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId: deviceId })
+        });
+      } catch (e) {
+        console.warn('Failed to clear server history:', e);
+      }
     }
   }
 
-  // Save conversation to localStorage
-  function saveConversationToStorage() {
+  // Save conversation to server (with device ID)
+  async function saveConversationToStorage() {
     try {
-      // Only keep last 20 messages to avoid storage issues (images are large)
-      // Also strip image data from storage to save space
-      const toSave = conversationHistory.slice(-20).map(msg => {
+      // Only keep last 50 messages
+      // Strip image data from storage to save space
+      const toSave = conversationHistory.slice(-50).map(msg => {
         if (Array.isArray(msg.content)) {
           // Strip image data, keep only text
           const textContent = msg.content.find(c => c.type === 'text');
@@ -611,14 +643,54 @@
         }
         return msg;
       });
+
+      // Save to server
+      await fetch('/api/history/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: deviceId,
+          messages: toSave
+        })
+      });
+
+      // Also save locally as backup
       localStorage.setItem('conversationHistory', JSON.stringify(toSave));
     } catch (e) {
       console.warn('Failed to save conversation:', e);
+      // Fallback: save locally only
+      try {
+        localStorage.setItem('conversationHistory', JSON.stringify(conversationHistory.slice(-50)));
+      } catch (localError) {
+        console.warn('Failed to save locally:', localError);
+      }
     }
   }
 
-  // Load conversation from localStorage
-  function loadConversationFromStorage() {
+  // Load conversation from server (with device ID)
+  async function loadConversationFromServer() {
+    try {
+      const response = await fetch(`/api/history/load?deviceId=${encodeURIComponent(deviceId)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.messages && data.messages.length > 0) {
+          welcomeMessage.style.display = 'none';
+          data.messages.forEach(msg => {
+            let displayContent = msg.content;
+            if (msg.hadImages) {
+              displayContent = '[包含图片] ' + displayContent;
+            }
+            addMessageToUI(msg.role, displayContent);
+          });
+          conversationHistory = data.messages;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load from server, trying local storage:', e);
+    }
+
+    // Fallback: try loading from localStorage
     try {
       const saved = localStorage.getItem('conversationHistory');
       if (saved) {
@@ -626,14 +698,12 @@
         if (loadedHistory.length > 0) {
           welcomeMessage.style.display = 'none';
           loadedHistory.forEach(msg => {
-            // Display with note about images
             let displayContent = msg.content;
             if (msg.hadImages) {
               displayContent = '[包含图片] ' + displayContent;
             }
             addMessageToUI(msg.role, displayContent);
           });
-          // Restore history for API (without image data)
           conversationHistory = loadedHistory;
         }
       }

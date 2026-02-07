@@ -4,6 +4,7 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const { GoogleGenAI } = require('@google/genai');
 const path = require('path');
+const fs = require('fs').promises;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,28 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Chat history storage directory
+const HISTORY_DIR = path.join(__dirname, 'chat_history');
+
+// Ensure history directory exists
+async function ensureHistoryDir() {
+  try {
+    await fs.mkdir(HISTORY_DIR, { recursive: true });
+  } catch (e) {
+    console.error('Failed to create history directory:', e);
+  }
+}
+ensureHistoryDir();
+
+// Sanitize device ID to prevent path traversal
+function sanitizeDeviceId(id) {
+  if (!id || typeof id !== 'string') return null;
+  // Only allow alphanumeric and hyphens (UUID format)
+  const sanitized = id.replace(/[^a-zA-Z0-9-]/g, '');
+  if (sanitized.length < 10 || sanitized.length > 50) return null;
+  return sanitized;
+}
 
 // Lazy initialization of OpenAI client
 let openai = null;
@@ -244,6 +267,91 @@ app.post('/api/chat', async (req, res) => {
       error: '发生错误，请稍后再试 / An error occurred, please try again later',
       details: error.message
     });
+  }
+});
+
+// Save chat history for a device
+app.post('/api/history/save', async (req, res) => {
+  try {
+    const { deviceId, messages } = req.body;
+    const safeId = sanitizeDeviceId(deviceId);
+
+    if (!safeId) {
+      return res.status(400).json({ error: '无效的设备ID / Invalid device ID' });
+    }
+
+    if (!Array.isArray(messages)) {
+      return res.status(400).json({ error: '无效的消息格式 / Invalid messages format' });
+    }
+
+    const filePath = path.join(HISTORY_DIR, `${safeId}.json`);
+    await fs.writeFile(filePath, JSON.stringify({
+      deviceId: safeId,
+      messages: messages,
+      updatedAt: new Date().toISOString()
+    }, null, 2));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to save history:', error);
+    res.status(500).json({ error: '保存失败 / Failed to save' });
+  }
+});
+
+// Load chat history for a device
+app.get('/api/history/load', async (req, res) => {
+  try {
+    const { deviceId } = req.query;
+    const safeId = sanitizeDeviceId(deviceId);
+
+    if (!safeId) {
+      return res.status(400).json({ error: '无效的设备ID / Invalid device ID' });
+    }
+
+    const filePath = path.join(HISTORY_DIR, `${safeId}.json`);
+
+    try {
+      const data = await fs.readFile(filePath, 'utf8');
+      const parsed = JSON.parse(data);
+      res.json({ messages: parsed.messages || [] });
+    } catch (e) {
+      if (e.code === 'ENOENT') {
+        // No history file yet
+        res.json({ messages: [] });
+      } else {
+        throw e;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load history:', error);
+    res.status(500).json({ error: '加载失败 / Failed to load' });
+  }
+});
+
+// Clear chat history for a device
+app.post('/api/history/clear', async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+    const safeId = sanitizeDeviceId(deviceId);
+
+    if (!safeId) {
+      return res.status(400).json({ error: '无效的设备ID / Invalid device ID' });
+    }
+
+    const filePath = path.join(HISTORY_DIR, `${safeId}.json`);
+
+    try {
+      await fs.unlink(filePath);
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to clear history:', error);
+    res.status(500).json({ error: '清除失败 / Failed to clear' });
   }
 });
 

@@ -22,3 +22,6 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# Chat history (user data)
+chat_history/
