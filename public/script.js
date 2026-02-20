@@ -11,6 +11,9 @@
   let isRecording = false;
   let recognition = null;
   let deviceId = null; // Unique device identifier
+  let lastScrollTop = 0;
+  let scrollUpAccumulated = 0;
+  let isProgrammaticScroll = false;
 
   // DOM Elements
   const chatContainer = document.getElementById('chat-container');
@@ -164,6 +167,60 @@
     // History panel
     historyBtn.addEventListener('click', showHistoryPanel);
     closeHistoryBtn.addEventListener('click', hideHistoryPanel);
+
+    // Scroll-based menu visibility
+    setupScrollBehavior();
+  }
+
+  // Scroll-based menu visibility: hide menus to maximize reading space
+  function setupScrollBehavior() {
+    var header = document.querySelector('.header');
+    var inputArea = document.querySelector('.input-area');
+    var SCROLL_THRESHOLD = 5;
+    var SCROLL_UP_SHOW_HEADER = 150; // px of accumulated upward scroll to show header
+
+    chatContainer.addEventListener('scroll', function() {
+      if (isProgrammaticScroll) return;
+
+      var scrollTop = chatContainer.scrollTop;
+      var delta = scrollTop - lastScrollTop;
+      var scrollHeight = chatContainer.scrollHeight;
+      var clientHeight = chatContainer.clientHeight;
+      var isAtBottom = scrollTop + clientHeight >= scrollHeight - 20;
+      var isAtTop = scrollTop <= 5;
+
+      // Always show header when at top
+      if (isAtTop) {
+        header.classList.remove('header-hidden');
+      }
+
+      if (delta > SCROLL_THRESHOLD) {
+        // Scrolling down
+        scrollUpAccumulated = 0;
+        header.classList.add('header-hidden');
+
+        // Show input area when reaching bottom
+        if (isAtBottom) {
+          inputArea.classList.remove('input-area-hidden');
+        }
+      } else if (delta < -SCROLL_THRESHOLD) {
+        // Scrolling up
+        scrollUpAccumulated += Math.abs(delta);
+        inputArea.classList.add('input-area-hidden');
+
+        // Show header after significant upward scroll
+        if (scrollUpAccumulated >= SCROLL_UP_SHOW_HEADER) {
+          header.classList.remove('header-hidden');
+        }
+      }
+
+      lastScrollTop = scrollTop;
+    }, { passive: true });
+
+    // Always show input area when text input is focused
+    userInput.addEventListener('focus', function() {
+      inputArea.classList.remove('input-area-hidden');
+    });
   }
 
   // Handle image selection
@@ -603,9 +660,16 @@
     return div;
   }
 
-  // Scroll to bottom
+  // Scroll to bottom (programmatic — show input area, don't trigger scroll hide logic)
   function scrollToBottom() {
+    isProgrammaticScroll = true;
     chatContainer.scrollTop = chatContainer.scrollHeight;
+    // Always show input area when we scroll to bottom programmatically
+    document.querySelector('.input-area').classList.remove('input-area-hidden');
+    lastScrollTop = chatContainer.scrollTop;
+    setTimeout(function() {
+      isProgrammaticScroll = false;
+    }, 50);
   }
 
   // Clear conversation
