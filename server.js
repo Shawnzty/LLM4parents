@@ -59,7 +59,6 @@ function getGeminiClient() {
 
 // Available models configuration
 const AVAILABLE_MODELS = [
-  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', supportsVision: true, provider: 'gemini' },
   { id: 'gpt-5.2', name: 'GPT-5.2', supportsVision: true, provider: 'openai' },
 ];
 
@@ -108,7 +107,7 @@ function convertMessagesToGemini(messages) {
 // Chat endpoint with streaming
 app.post('/api/chat/stream', async (req, res) => {
   try {
-    const { messages, model = 'gemini-3.1-pro-preview' } = req.body;
+    const { messages, model = 'gpt-5.2' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
@@ -198,7 +197,7 @@ app.post('/api/chat/stream', async (req, res) => {
 // Chat endpoint (non-streaming)
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, model = 'gemini-3.1-pro-preview' } = req.body;
+    const { messages, model = 'gpt-5.2' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
