@@ -1,12 +1,12 @@
 # LLM4Parents - AI 智能助手
 
-一个简单易用的 GPT 聊天网站，专为父母设计，支持中国大陆访问。
+一个简单易用的 GPT 聊天网站，专为父母设计。
 
-A simple and user-friendly GPT chat website designed for parents, with support for access from China.
+A simple and user-friendly GPT chat website designed for parents.
 
 ## 功能特点 / Features
 
-- 🤖 支持最新的 GPT 模型 (GPT-4o, GPT-4, GPT-3.5)
+- 🤖 支持最新的 GPT 模型
 - 🇨🇳 中文界面，适合中国用户
 - 📱 响应式设计，支持手机和电脑
 - 💾 对话历史本地保存
@@ -40,117 +40,6 @@ npm start
 
 服务将运行在 http://localhost:3000
 
-## 中国大陆部署指南 / China Deployment Guide
-
-由于 OpenAI API 在中国大陆无法直接访问，以下是几种解决方案：
-
-### 方案一：使用海外服务器（推荐）
-
-1. **购买海外云服务器**
-   - 推荐地区：香港、新加坡、日本、美国
-   - 推荐服务商：
-     - 阿里云国际版（香港/新加坡）
-     - 腾讯云国际版
-     - AWS Lightsail
-     - Vultr
-     - DigitalOcean
-
-2. **部署步骤**
-   ```bash
-   # 在服务器上
-   git clone <your-repo-url>
-   cd LLM4parents
-   npm install
-   cp .env.example .env
-   # 编辑 .env 添加 API Key
-   npm start
-   ```
-
-3. **使用 PM2 保持运行**
-   ```bash
-   npm install -g pm2
-   pm2 start server.js --name llm4parents
-   pm2 save
-   pm2 startup
-   ```
-
-4. **配置域名和 HTTPS**（推荐）
-   ```bash
-   # 安装 Nginx
-   sudo apt install nginx
-
-   # 安装 Certbot 获取免费 SSL 证书
-   sudo apt install certbot python3-certbot-nginx
-   sudo certbot --nginx -d your-domain.com
-   ```
-
-   Nginx 配置示例：
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-       return 301 https://$server_name$request_uri;
-   }
-
-   server {
-       listen 443 ssl;
-       server_name your-domain.com;
-
-       ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-       ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-       location / {
-           proxy_pass http://127.0.0.1:3000;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_cache_bypass $http_upgrade;
-       }
-   }
-   ```
-
-### 方案二：使用 API 代理服务
-
-如果你已有国内服务器，可以使用第三方 API 代理服务：
-
-1. 修改 `.env` 文件中的 `OPENAI_BASE_URL`：
-   ```
-   OPENAI_BASE_URL=https://your-proxy-api.com/v1
-   ```
-
-2. 常见的代理服务提供商（需自行评估安全性）：
-   - OpenAI-SB
-   - API2D
-   - 其他第三方代理
-
-⚠️ **注意**：使用第三方代理服务时，请注意数据安全和隐私问题。
-
-### 方案三：使用 Cloudflare Workers（免费）
-
-1. 注册 Cloudflare 账号
-2. 创建一个 Worker，代理 OpenAI API 请求
-3. 将 `OPENAI_BASE_URL` 设置为你的 Worker 地址
-
-### Docker 部署（可选）
-
-```dockerfile
-# Dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-```bash
-# 构建和运行
-docker build -t llm4parents .
-docker run -d -p 3000:3000 --env-file .env llm4parents
-```
-
 ## 获取 OpenAI API Key
 
 1. 访问 https://platform.openai.com/
@@ -170,9 +59,7 @@ docker run -d -p 3000:3000 --env-file .env llm4parents
 A: 请检查 `.env` 文件是否正确配置了 `OPENAI_API_KEY`。
 
 ### Q: 为什么请求超时？
-A:
-1. 检查服务器是否能访问 OpenAI API
-2. 如果在中国大陆服务器，需要配置代理
+A: 检查服务器是否能访问 OpenAI API
 
 ### Q: 如何更换模型？
 A: 在网页顶部的下拉菜单中选择不同的模型。
