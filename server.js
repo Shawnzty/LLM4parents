@@ -59,7 +59,7 @@ function getGeminiClient() {
 
 // Available models configuration
 const AVAILABLE_MODELS = [
-  { id: 'gpt-5.4', name: 'GPT-5.4', supportsVision: true, provider: 'openai' },
+  { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', supportsVision: true, provider: 'openai' },
 ];
 
 // Get available models
@@ -107,7 +107,7 @@ function convertMessagesToGemini(messages) {
 // Chat endpoint with streaming
 app.post('/api/chat/stream', async (req, res) => {
   try {
-    const { messages, model = 'gpt-5.4' } = req.body;
+    const { messages, model = 'gpt-5.6-sol' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
@@ -197,7 +197,7 @@ app.post('/api/chat/stream', async (req, res) => {
 // Chat endpoint (non-streaming)
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, model = 'gpt-5.4' } = req.body;
+    const { messages, model = 'gpt-5.6-sol' } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: '请提供有效的消息 / Please provide valid messages' });
